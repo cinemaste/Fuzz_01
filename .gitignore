@@ -1,10 +1,16 @@
- 
-#Glary Utilities Fuzzer
-#Glary Utilities is the #1 free, 
-#powerful and all-in-one utility in the world market! 
-#It offers numerous powerful and easy-to-use system 
-#tools and utilities to fix, speed up, maintain and protect your PC.
-#http://www.glarysoft.com/
+file_list = [   "tables.doc",
+    "size.doc",
+    "Mulo_e.doc",
+    "rETI.doc",
+    "aNALYST.doc",
+    "aNALYST2.doc"]
+
+apps = "%ProgramFiles%\\Windows NT\\Accessories\\wordpad.exe"
+
+fuzz_output = "fuzz.doc"
+
+FuzzFactor = 250
+num_tests = 1000
 
 import math
 import random
@@ -12,23 +18,37 @@ import string
 import subprocess
 import time
 
+for i in xrange(num_tests):
+    file_choice = random.choice(file_list)
+    app = random.choice(apps)
+    buf = bytearray(open(file_choice, 'rb').read())
+    
+    # start Charlie Miller code (modified)
+    numwrites = random.randrange(math.ceil(((float(len(buf)))/FuzzFactor)))+1
+    fuzz_choice = random.choice(['start', 'end', 'middle', 'random'])
+    begin = None
+    if fuzz_choice == 'start': begin = 0
+    if fuzz_choice == 'end': begin = len(buf)-numwrites-1
+    if fuzz_choice == 'middle': begin = random.randrange(len(buf)-numwrites)
+    for j in xrange(numwrites):
+        rbyte = random.randrange(256)
+        if begin is None:
+            rn = random.randrange(len(buf))
+        else:
+            rn = begin
+            begin += 1
+        buf[rn] = "%c"%(rbyte)
+    # end Charlie Miller code (modified)
 
+    open(fuzz_output, 'wb').write(buf)
 
-location = "./images/"
-app = "C:\\Program Files (x86)\\Glary Utilities\\Integrator.exe"
-
-file_extension = [".jpg",".gif",".png",".tif",".ico", ".bmp"]
-
-fuzz_output = ""
-
-FuzzFactor = 250
-num_tests = 10000
-num_crashed = 0 
-
-
-def random_file():
-
-    extension = random.choice(file_extension)
+    print "Using app: %s orig_file: %s fuzz_type: %s #writes=%d" % (app, file_choice, fuzz_choice, numwrites)
+    process = subprocess.Popen([app, fuzz_output])
+    
+    time.sleep(1)
+    crashed = process.poll()
+    if not crashed:
+        process.terminate()n = random.choice(file_extension)
     global fuzz_output
     fuzz_output="fuzz"+extension
     rfile = str(random.randint(1,3))+extension
